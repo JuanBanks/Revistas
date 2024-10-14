@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniRev</title>
+    <style>
+        body {
+            background-color: #c9c3bb;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .header {
+            background-color: #5ca65c;
+            padding: 20px;
+        }
+        .button {
+            margin: 20px;
+            padding: 20px;
+            font-size: 18px;
+            background-color: black;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button img {
+            width: 100px;
+            height: 50px;
+        }
+        .progress-container {
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 30px;
+            background-color: green;
+        }
+        .progress {
+            width: 100%;
+            background-color: #ccc;
+        }
+        #cancel-button {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none; /* Oculto inicialmente */
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='PowerBi.png') }}" alt="Power BI" width="50" height="50">
+        <h1>UniRev</h1>
+    </div>
+    <img src="{{ url_for('static', filename='Uniamazonia.png') }}" alt="UniAmazonia" width="200" height="200">
+    <div>
+        <button class="button" id="publindex-button" onclick="startScript('/run/publindex')">
+            <img src="{{ url_for('static', filename='Publindex.png') }}" alt="Publindex">
+        </button>
+        <button class="button" id="sjr-button" onclick="startScript('/run/sjr')">
+            <img src="{{ url_for('static', filename='Scimago.png') }}" alt="SJR">
+        </button>
+        <button class="button" id="revistas-button" onclick="startScript('/run/revistas')">
+            <img src="{{ url_for('static', filename='Revista.png') }}" alt="Revistas">
+        </button>
+
+        <div class="progress-container">
+            <div class="progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <button id="cancel-button" onclick="cancelProcess()">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        let currentInterval = null;
+
+        function startScript(endpoint) {
+            const progressBar = document.getElementById('progress-bar');
+            const cancelButton = document.getElementById('cancel-button');
+            const buttons = document.querySelectorAll('.button');
+
+            // Deshabilitar botones para evitar iniciar múltiples procesos al mismo tiempo
+            buttons.forEach(button => button.disabled = true);
+
+            // Mostrar el botón de cancelar y reiniciar la barra de progreso
+            cancelButton.style.display = 'block';
+            progressBar.style.width = '0%';
+
+            // Hacer una solicitud para iniciar el script
+            fetch(endpoint)
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    let width = 0;
+
+                    // Actualizar la barra de progreso periódicamente
+                    currentInterval = setInterval(() => {
+                        if (width >= 100) {
+                            clearInterval(currentInterval);
+                            cancelButton.style.display = 'none';
+                            buttons.forEach(button => button.disabled = false);
+                        } else {
+                            width += 10; // Aumenta progresivamente el progreso
+                            progressBar.style.width = width + '%';
+                        }
+                    }, 500); // Cada 500 ms
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resetUI();
+                });
+        }
+
+        function cancelProcess() {
+            // Hacer una solicitud para cancelar los procesos
+            fetch('/cancel')
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    resetUI();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    resetUI();
+                });
+        }
+
+        function resetUI() {
+            // Reiniciar la barra de progreso y ocultar el botón de cancelar
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = '0%';
+
+            const cancelButton = document.getElementById('cancel-button');
+            cancelButton.style.display = 'none';
+
+            // Habilitar los botones
+            const buttons = document.querySelectorAll('.button');
+            buttons.forEach(button => button.disabled = false);
+
+            // Detener el intervalo de la barra de progreso si está activo
+            if (currentInterval) {
+                clearInterval(currentInterval);
+            }
+        }
+    </script>
+</body>
+</html>
